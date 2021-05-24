@@ -13,3 +13,4 @@ LIBRERIAS:
 /Users/R2D2/.m2/repository/org/apache/logging/log4j/log4j-slf4j-impl/2.7/log4j-slf4j-impl-2.7.jar
 /Users/R2D2/.m2/repository/org/slf4j/slf4j-api/1.7.25/slf4j-api-1.7.25.jar
 
+

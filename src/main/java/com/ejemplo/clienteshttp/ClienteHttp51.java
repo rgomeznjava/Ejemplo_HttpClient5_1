@@ -43,7 +43,7 @@ import org.apache.logging.log4j.Logger;
 //import org.apache.log4j.Logger;
 //import org.slf4j.LoggerFactory;
 
-/* imports 4.5.13 ---------------------
+/* imports version 4.5.13  comparación ---------------------
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
@@ -181,9 +181,6 @@ public class ClienteHttp51 {
 					
 		
 			//--------- TRATAR RESPUESTA C�DIGOS Y CONTENIDO RECIBIDO 
-			
-			//C�digo de estado recibido y mensaje HTTP			
-			//e_StatusLine statusLine = closeableHttpResponse.getStatusLine();
 				
 			int codigoEstado = closeableHttpResponse.getCode();
 			String mensajeHttp = closeableHttpResponse.getReasonPhrase();
@@ -316,14 +313,11 @@ public class ClienteHttp51 {
 				
 	
 			//--------- TRATAR RESPUESTA C�DIGOS Y CONTENIDO RECIBIDO 
-		
-			//C�digo de estado recibido y mensaje HTTP			
-			//e_StatusLine statusLine = closeableHttpResponse.getStatusLine();
-				
+	
 			int codigoEstado = closeableHttpResponse.getCode();
 			String mensajeHttp = closeableHttpResponse.getReasonPhrase();
-			LOG.info(" ---  Respuesta peticion GET: " + codigoEstado + " - " +	mensajeHttp);	
-			System.out.println(" ---  Respuesta peticion GET: " + codigoEstado + " - " +	mensajeHttp);
+			LOG.info(" ---  Respuesta peticion POST: " + codigoEstado + " - " +	mensajeHttp);	
+			System.out.println(" ---  Respuesta peticion POST: " + codigoEstado + " - " +	mensajeHttp);
 			
 			//Recogemos el codigo de estado en nuestro objeto negocio
 			respCliente.setCodigoEstado(codigoEstado);
@@ -425,7 +419,7 @@ public class ClienteHttp51 {
 		 	
 		try {
 			
-			//-- CONFIGURAR HTTP CLIENT Y HTTP GET
+			//-- CONFIGURAR HTTP CLIENT 
 			httpClient = this.configurarCloseableHttpClient();
 	
 			HttpPut httpPut = new HttpPut(urlPeticion); 
@@ -446,13 +440,11 @@ public class ClienteHttp51 {
 				
 	
 			//--------- TRATAR RESPUESTA C�DIGOS Y CONTENIDO RECIBIDO 
-			//C�digo de estado recibido y mensaje HTTP			
-			//e_StatusLine statusLine = closeableHttpResponse.getStatusLine();
-				
+			
 			int codigoEstado = closeableHttpResponse.getCode();
 			String mensajeHttp = closeableHttpResponse.getReasonPhrase();
-			LOG.info(" ---  Respuesta peticion GET: " + codigoEstado + " - " +	mensajeHttp);	
-			System.out.println(" ---  Respuesta peticion GET: " + codigoEstado + " - " +	mensajeHttp);
+			LOG.info(" ---  Respuesta peticion PUT: " + codigoEstado + " - " +	mensajeHttp);	
+			System.out.println(" ---  Respuesta peticion PUT: " + codigoEstado + " - " +	mensajeHttp);
 			
 		
 			//Recogemos el codigo de estado en nuestro objeto negocio
@@ -569,14 +561,11 @@ public class ClienteHttp51 {
 					
 		
 			//--------- TRATAR RESPUESTA C�DIGOS Y CONTENIDO RECIBIDO 
-			
-			//C�digo de estado recibido y mensaje HTTP			
-			//e_StatusLine statusLine = closeableHttpResponse.getStatusLine();
 				
 			int codigoEstado = closeableHttpResponse.getCode();
 			String mensajeHttp = closeableHttpResponse.getReasonPhrase();
-			LOG.info(" ---  Respuesta peticion GET: " + codigoEstado + " - " +	mensajeHttp);	
-			System.out.println(" ---  Respuesta peticion GET: " + codigoEstado + " - " +	mensajeHttp);
+			LOG.info(" ---  Respuesta peticion DELETE: " + codigoEstado + " - " +	mensajeHttp);	
+			System.out.println(" ---  Respuesta peticion DELETE: " + codigoEstado + " - " +	mensajeHttp);
 			
 			//Recogemos el codigo de estado en nuestro objeto negocio
 			respCliente.setCodigoEstado(codigoEstado);
@@ -720,6 +709,7 @@ public class ClienteHttp51 {
 	
 	   //Aceptar todos los certificados (no los comprueba, no instados en cliente JVM,etc)
 	   TrustStrategy acceptingTrustStrategy = (cert, authType) -> true;
+	  
 	   //Crear SSL CONTEXT
 	   SSLContext sslContext = SSLContexts.custom().setProtocol(VERSION_TLS).loadTrustMaterial(null, acceptingTrustStrategy).build();
 	   SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE);	
@@ -738,13 +728,12 @@ public class ClienteHttp51 {
 	
 		//Crear objeto HTTP CLIENT (Tipo CloseableHttpClient)  YA CONFIGURADO CON TODO LO ANTERIOR
 		CloseableHttpClient closeableHttpClient = HttpClients.custom()
-															  //_e_.setSSLSocketFactory(sslsf)
-															  
+															  //_other_.setSSLSocketFactory(sslsf)
 															  .setConnectionManager(connectionManager)
 															  .setDefaultRequestConfig(
 																	  RequestConfig.custom().setConnectionRequestTimeout(CONNECTION_TIME_OUT,TimeUnit.MILLISECONDS) 
 												                							.setConnectTimeout(CONNECTION_TIME_OUT,TimeUnit.MILLISECONDS).build()
-												                							//.setSocketTimeout(CONNECTION_TIME_OUT,TimeUnit.MILLISECONDS)						
+												                							//_no_.setSocketTimeout(CONNECTION_TIME_OUT,TimeUnit.MILLISECONDS)						
 												                )
 															  .disableCookieManagement() //desactivar gestion cookies
 															  .build();

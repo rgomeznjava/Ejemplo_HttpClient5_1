@@ -34,14 +34,15 @@ import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.ssl.SSLContexts;
 import org.apache.hc.core5.ssl.TrustStrategy;
+
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-
 //import org.apache.log4j.Logger;
 //import org.slf4j.LoggerFactory;
 
-/* imports version 4.5.13  comparación ---------------------
+
+/*  ----- COMPARACION IMPORTS DE VERSIÓN 4.5.13 version   ---------------------
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
@@ -74,7 +75,7 @@ import org.apache.http.util.EntityUtils;
 /**
  * 	CLIENTE HTTP CLIENT EJEMPLO CRUD
  * 
- * 	- IMPLEMENTA HTTPCLIENT 4.5.13
+ * 	- IMPLEMENTADO HTTPCLIENT 5.1
  * 
  * @author RGN 
  *

@@ -1,5 +1,7 @@
 package com.ejemplo.clienteshttp;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -70,289 +72,76 @@ import org.apache.http.util.EntityUtils;
 */
 
 
+
      
 /**
  * 	CLIENTE HTTP CLIENT EJEMPLO CRUD
  * 
- * 	- IMPLEMENTA HTTPCLIENT 4.5.13
+ * 	- IMPLEMENTA HTTPCLIENT 5.1
  * 
- * @author RGN 
+ * @author GRN 
  *
  */
-public class ClienteHttp51 {
+public class ClienteHttp51_old {
 	
-	
-    private static final Logger LOG = LogManager.getLogger(ClienteHttp51.class.getName());
-
-    //Charset UTF-8
-  	private static final  String CHARSET_UTF_8 = "UTF-8";	
-  	
-  	//Salto linea
-  	private static String NEW_LINE = System.getProperty("line.separator");	
+    private static final Logger LOG = LogManager.getLogger(ClienteHttp51_old.class.getName());
+    //private static org.slf4j.Logger LOG = LoggerFactory.getLogger(ClienteHttp4513Ejemplo.class);
 
 	
 	private static final int MIN_COD_ERROR_HTTP = 300;
 	
+	private Properties prop = new Properties();
 	
 	//Constantes TLS
 	public static final String TLSv1_2 = "TLSv1.2";
 	public static final String TLSv1_3 = "TLSv1.3";
 	
 	//Version TLS. Por defecto  TLSv1.3
-	private String versionTLS = TLSv1_3; 
+	private String VERSION_TLS = TLSv1_3; 
 	
-	//Puerto ssl
-	private int portSSL = 443;  
-		
 	//En milisegundos x Defecto (60 segundos)
-	private int connectionTimeOut = 60000;  
+	private static int CONNECTION_TIME_OUT = 60000;  
 	
+	//Charset UTF-8
+	private static final  String CHARSET_UTF_8 = "UTF-8";	
+	
+	//Salto linea
+	private static String NEW_LINE = System.getProperty("line.separator");	
 
+
+	private void loadProperties() {
+		
+		 try (InputStream input = ClienteHttp51_old.class.getClassLoader().getResourceAsStream("app.properties")) {
+
+	         
+	            if (input == null) {
+	                System.out.println("Sorry, unable to find app.properties");
+	                return;
+	            }
+
+	            //load a properties file from class path, inside static method
+	            this.prop.load(input);
+	           
+	            if (prop.getProperty("VERSION_TLS")!=null) VERSION_TLS = prop.getProperty("VERSION_TLS");
+	            if (prop.getProperty("CONNECTION_TIME_OUT")!=null) CONNECTION_TIME_OUT = Integer.parseInt(prop.getProperty("CONNECTION_TIME_OUT"));
+
+	        } catch (IOException ex) {
+	            ex.printStackTrace();
+	        }
+	}
+	
 	
 	/**
 	 * Constructor
 	 * 
 	 */
-	public ClienteHttp51(Properties properties) {
+	public ClienteHttp51_old() {
 		
-		// Sobreescribir variables si vienen: versionTLS, portSSL, connectionTimeOut
-        if (properties.getProperty("VERSION_TLS")!=null) {
-        	versionTLS = properties.getProperty("VERSION_TLS").trim();
-        }
-        if (properties.getProperty("PORT_SSL")!=null && properties.getProperty("PORT_SSL").trim().length()>0) {
-        	portSSL = Integer.parseInt(properties.getProperty("PORT_SSL").trim());
-        }
-        if (properties.getProperty("CONNECTION_TIME_OUT")!=null  && properties.getProperty("CONNECTION_TIME_OUT").trim().length()>0) {
-        	connectionTimeOut = Integer.parseInt(properties.getProperty("CONNECTION_TIME_OUT").trim());
-        }
-
+		loadProperties();
 	}
 
 	
 	
-	/**
-	 * 	LIBERAR RECURSOS:
-	 * 		 CloseableHttpResponse, CloseableHttpClient
-	 * @param obj
-	 */
-	private void liberarRecurso(Object obj) {
-		
-		String recurso = "";
-		try {			
-			if  (obj!=null) {	
-				recurso = obj.getClass().getName();
-				
-				if  (obj instanceof CloseableHttpResponse) {
-					((CloseableHttpResponse) obj).close();
-				} else if (obj instanceof CloseableHttpClient) {
-					((CloseableHttpClient) obj).close();
-				}
-			}
-			
-		} catch (Exception e) {		
-			LOG.info("Error al cerrar recurso "+ recurso + " Error:" +e.getMessage());
-		}
-	}
-
-	 
-	
-	/**
-	 * INICIALIZAR TRUST MANAGER (lo utilizamos sólo para trazas)
-	 * 
-	 * @param sslContext
-	 */
-	private void inicializarTrusrManager(SSLContext sslContext)  {
-		
-		try {
-			   TrustManager tm = new X509TrustManager() {
-			    	public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-			    		LOG.debug(" getAcceptedIssuers():OK");		
-						return null;
-					}
-					public void checkClientTrusted(java.security.cert.X509Certificate[] arg0, String arg1) throws java.security.cert.CertificateException {	
-						LOG.debug(" checkClientTrusted: " + arg0 + " X509Certificate[] encontrados: "+arg0.length + "  auth" +arg1);	
-					}
-					public void checkServerTrusted(java.security.cert.X509Certificate[] arg0, String arg1) throws java.security.cert.CertificateException {
-						LOG.debug("checkServerTrusted: " + arg0 + " X509Certificate[] encontrados: "+arg0.length);
-						for (java.security.cert.X509Certificate cert: arg0) { 
-							LOG.info(" Tipo:"+ cert.getType()+ " Version:" + cert.getVersion() + " "+cert.getSubjectDN());
-							break; //sacamos el primero encontrado
-						}	
-					}
-				}; 
-				
-				sslContext.init(null, new TrustManager[]{tm}, null);
-				
-		} catch (Exception e) {
-			LOG.error(" Error al  inicializarTrusrManager: " + e.getMessage() );	
-			//no lanzar
-		}
-	}
-
-
-
-	//----------  CONFIGURACION HTTPCLIENT PARA TRABAJAR CON HTTPS, ETC  (YA CONFIGURADO NO TOCAR) ----------------
-	/**
-	 * 	CONFIGURAR CLOSEABLE HTTPCLIENT
-	 * 
-	 * @return
-	 * @throws NoSuchAlgorithmException
-	 * @throws KeyManagementException
-	 * @throws KeyStoreException
-	 */
-	private CloseableHttpClient configurarCloseableHttpClient() throws NoSuchAlgorithmException, KeyManagementException, KeyStoreException {
-		
-		//CONFIGURAR OBJETO  closeableHttpClient PARA HTTP Y HTTPS CON VERSION_TLS (Indicada, por defecto TLSv1.3)
-	
-	   //Aceptar todos los certificados (no los comprueba, no instados en cliente JVM,etc)
-	   TrustStrategy acceptingTrustStrategy = (cert, authType) -> true;
-	
-	   //Crear SSL CONTEXT
-	   SSLContext sslContext = SSLContexts.custom().setProtocol(versionTLS).loadTrustMaterial(null, acceptingTrustStrategy).build();
-	   SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE);	
-	
-	   //S�lo para mostrar  trazas. (NO UTILIZAR PARA CONFIGURAR CERTIFICADOS, ESO SE HACE EN loadTrustMaterial)
-	   this.inicializarTrusrManager(sslContext);
-	
-		//CREAR FACTORIA, HTTP  y HTTPS	 
-		Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory> create()
-																  .register("https", sslsf)
-																  .register("http", new PlainConnectionSocketFactory())
-																  .build();
-		
-		//Utilizado BasicHttpClientConnectionManager
-		BasicHttpClientConnectionManager connectionManager = new BasicHttpClientConnectionManager(socketFactoryRegistry);
-	
-		//Crear objeto HTTP CLIENT (Tipo CloseableHttpClient)  YA CONFIGURADO CON TODO LO ANTERIOR
-		CloseableHttpClient closeableHttpClient = HttpClients.custom()
-															  //_other_.setSSLSocketFactory(sslsf)
-															  .setConnectionManager(connectionManager)
-															  .setDefaultRequestConfig(
-																	  RequestConfig.custom().setConnectionRequestTimeout(connectionTimeOut,TimeUnit.MILLISECONDS) 
-												                							.setConnectTimeout(connectionTimeOut,TimeUnit.MILLISECONDS).build()
-												                							//_no_.setSocketTimeout(CONNECTION_TIME_OUT,TimeUnit.MILLISECONDS)						
-												                )
-															  .disableCookieManagement() //desactivar gestion cookies
-															  .build();
-	
-		LOG.info(" ---> CONFIGURADO HTTPCLIENT CON VERSION_TLS:  "+ versionTLS);
-		System.out.println(" ---> CONFIGURADO HTTPCLIENT CON VERSION_TLS:  "+ versionTLS);
-		return closeableHttpClient;
-	}
-
-
-
-	/**
-	 *   REALIZAR PETICION DELETE
-	 * 
-	 * @param urlPeticion
-	 * @return RespuestaCliente
-	 */
-	public RespuestaClienteHttp realizarPeticion_DELETE(String urlPeticion) throws Exception {
-	
-		RespuestaClienteHttp respCliente = new RespuestaClienteHttp();
-		
-		String resultado = "";
-		
-		//Objeto realizar peticion
-		CloseableHttpClient httpClient = null;
-		
-		//Objeto recoge respuesta
-		CloseableHttpResponse closeableHttpResponse = null;
-		 	
-		try {
-			
-			//-- CONFIGURAR HTTP CLIENT Y HTTP DELETE
-			httpClient = this.configurarCloseableHttpClient();
-			
-			//Preparar peticion DELETE
-			HttpDelete httpDelete = new HttpDelete(urlPeticion);
-			
-			 //Ejemplo add cabeceras
-			//httpDelete.addHeader("usuario", this.usuario);
-							
-			//-------- REALIZAR LLAMADA HTTP/S DELETE ---------------
-		
-			LOG.info(" ---  realizarPeticion_DELETE Call: "+ urlPeticion);
-			
-			closeableHttpResponse = httpClient.execute(httpDelete);
-					
-		
-			//--------- TRATAR RESPUESTA C�DIGOS Y CONTENIDO RECIBIDO 
-				
-			int codigoEstado = closeableHttpResponse.getCode();
-			String mensajeHttp = closeableHttpResponse.getReasonPhrase();
-			LOG.info(" ---  Respuesta peticion DELETE: " + codigoEstado + " - " +	mensajeHttp);	
-			System.out.println(" ---  Respuesta peticion DELETE: " + codigoEstado + " - " +	mensajeHttp);
-			
-			//Recogemos el codigo de estado en nuestro objeto negocio
-			respCliente.setCodigoEstado(codigoEstado);
-			
-		
-			//HAY ERROR SI COD.ESTADO ES  IGUAL O SUPERIOR 300 (Excepto nuestro error a medida 400) 
-			boolean hayErrorRespuesta = (codigoEstado >= MIN_COD_ERROR_HTTP && (codigoEstado != HttpStatus.SC_BAD_REQUEST) );
-		
-			//CASOS ERROR EN RESPUESTA
-			if (hayErrorRespuesta) {
-				
-				//Lanzamos ERROR: No recogemos respuesta
-				throw new HttpResponseException(codigoEstado, mensajeHttp);
-			
-			} else {
-				
-				//CASOS OK - CODIGOS x DEBAJO DE 300 ->  200 OK, 201 CREATED, ETC.
-				//MAS ERROR A MEDIDA NEGOCIO (400 BAD REQUEST) datos incorrectos.
-				
-				//Extraer contenido (entity) de la respuesta (closeableHttpResponse)
-				HttpEntity entity = closeableHttpResponse.getEntity();
-			
-				//Error: RESPUESTA SIN CONTENIDO si tiene que venir contenido.
-				if (entity == null) {
-					
-					throw new ClientProtocolException("RESPUESTA SIN CONTENIDO"); 
-				
-				} else {
-					 
-					LOG.info("--------  RESPUESTA OBTENIDA -----------------");
-						
-					//OBTENER EL RESULTADO de la respuesta (HttpEntity) en String
-					//utilizamos clase de ayuda EntityUtils
-					resultado = EntityUtils.toString(entity,CHARSET_UTF_8);	
-					
-					LOG.info("  resultado.legth: " + resultado.length() + " resultado: " + resultado);
-				
-					respCliente.setExitoPeticion(true);		
-					
-					//Liberar recursos HttpEntity
-					EntityUtils.consume(entity);
-				}
-		
-			}
-						
-		} catch (HttpResponseException hre) {		
-					
-			LOG.error(" Error en realizarPeticion_DELETE(HttpResponseException): " + hre.getMessage());
-	
-			respCliente.setExitoPeticion(false);
-						
-		} catch (Exception ex) {	
-			
-			LOG.error(" Error en realizarPeticion_DELETE(Exception): " + ex.getMessage());
-			
-			respCliente.setExitoPeticion(false);
-			 	
-		} finally {
-			
-			 liberarRecurso(closeableHttpResponse);
-			
-			 liberarRecurso(httpClient);
-	    } 
-		
-		return respCliente;
-	}
-
-
-
 	/**
 	 *   REALIZAR PETICION GET
 	 * 
@@ -480,8 +269,7 @@ public class ClienteHttp51 {
 	}
 
 
-
-	/**
+	 /**
 	 * REALIZAR PETICION POST XML
 	 * 
 	 * @param urlPeticion
@@ -506,7 +294,7 @@ public class ClienteHttp51 {
 			
 			//-- CONFIGURAR HTTP CLIENT Y HTTP GET
 			httpClient = this.configurarCloseableHttpClient();
-	
+
 			HttpPost httpPost = new HttpPost(urlPeticion); 
 			
 			//Add parametros a cabecera
@@ -607,8 +395,6 @@ public class ClienteHttp51 {
 				
 	 return respCliente;
 	}
-
-
 
 	/**
 	 * REALIZAR PETICION PUT XML:  MODIFICACION DE REGISTRO EXISTENTE
@@ -736,6 +522,225 @@ public class ClienteHttp51 {
 		} 
 				
 	 return respCliente;
+	}
+	
+	/**
+	 *   REALIZAR PETICION DELETE
+	 * 
+	 * @param urlPeticion
+	 * @return RespuestaCliente
+	 */
+	public RespuestaClienteHttp realizarPeticion_DELETE(String urlPeticion) throws Exception {
+	
+		RespuestaClienteHttp respCliente = new RespuestaClienteHttp();
+		
+		String resultado = "";
+		
+		//Objeto realizar peticion
+		CloseableHttpClient httpClient = null;
+		
+		//Objeto recoge respuesta
+		CloseableHttpResponse closeableHttpResponse = null;
+		 	
+		try {
+			
+			//-- CONFIGURAR HTTP CLIENT Y HTTP DELETE
+			httpClient = this.configurarCloseableHttpClient();
+			
+			//Preparar peticion DELETE
+			HttpDelete httpDelete = new HttpDelete(urlPeticion);
+			
+			 //Ejemplo add cabeceras
+			//httpDelete.addHeader("usuario", this.usuario);
+							
+			//-------- REALIZAR LLAMADA HTTP/S DELETE ---------------
+		
+			LOG.info(" ---  realizarPeticion_DELETE Call: "+ urlPeticion);
+			
+			closeableHttpResponse = httpClient.execute(httpDelete);
+					
+		
+			//--------- TRATAR RESPUESTA C�DIGOS Y CONTENIDO RECIBIDO 
+				
+			int codigoEstado = closeableHttpResponse.getCode();
+			String mensajeHttp = closeableHttpResponse.getReasonPhrase();
+			LOG.info(" ---  Respuesta peticion DELETE: " + codigoEstado + " - " +	mensajeHttp);	
+			System.out.println(" ---  Respuesta peticion DELETE: " + codigoEstado + " - " +	mensajeHttp);
+			
+			//Recogemos el codigo de estado en nuestro objeto negocio
+			respCliente.setCodigoEstado(codigoEstado);
+			
+		
+			//HAY ERROR SI COD.ESTADO ES  IGUAL O SUPERIOR 300 (Excepto nuestro error a medida 400) 
+			boolean hayErrorRespuesta = (codigoEstado >= MIN_COD_ERROR_HTTP && (codigoEstado != HttpStatus.SC_BAD_REQUEST) );
+		
+			//CASOS ERROR EN RESPUESTA
+			if (hayErrorRespuesta) {
+				
+				//Lanzamos ERROR: No recogemos respuesta
+				throw new HttpResponseException(codigoEstado, mensajeHttp);
+			
+			} else {
+				
+				//CASOS OK - CODIGOS x DEBAJO DE 300 ->  200 OK, 201 CREATED, ETC.
+				//MAS ERROR A MEDIDA NEGOCIO (400 BAD REQUEST) datos incorrectos.
+				
+				//Extraer contenido (entity) de la respuesta (closeableHttpResponse)
+				HttpEntity entity = closeableHttpResponse.getEntity();
+			
+				//Error: RESPUESTA SIN CONTENIDO si tiene que venir contenido.
+				if (entity == null) {
+					
+					throw new ClientProtocolException("RESPUESTA SIN CONTENIDO"); 
+				
+				} else {
+					 
+					LOG.info("--------  RESPUESTA OBTENIDA -----------------");
+						
+					//OBTENER EL RESULTADO de la respuesta (HttpEntity) en String
+					//utilizamos clase de ayuda EntityUtils
+					resultado = EntityUtils.toString(entity,CHARSET_UTF_8);	
+					
+					LOG.info("  resultado.legth: " + resultado.length() + " resultado: " + resultado);
+				
+					respCliente.setExitoPeticion(true);		
+					
+					//Liberar recursos HttpEntity
+					EntityUtils.consume(entity);
+				}
+		
+			}
+						
+		} catch (HttpResponseException hre) {		
+					
+			LOG.error(" Error en realizarPeticion_DELETE(HttpResponseException): " + hre.getMessage());
+	
+			respCliente.setExitoPeticion(false);
+						
+		} catch (Exception ex) {	
+			
+			LOG.error(" Error en realizarPeticion_DELETE(Exception): " + ex.getMessage());
+			
+			respCliente.setExitoPeticion(false);
+			 	
+		} finally {
+			
+			 liberarRecurso(closeableHttpResponse);
+			
+			 liberarRecurso(httpClient);
+	    } 
+		
+		return respCliente;
+	}
+	
+	/**
+	 * 	LIBERAR RECURSOS:
+	 * 		 CloseableHttpResponse, CloseableHttpClient
+	 * @param obj
+	 */
+	private void liberarRecurso(Object obj) {
+		
+		String recurso = "";
+		try {			
+			if  (obj!=null) {	
+				recurso = obj.getClass().getName();
+				
+				if  (obj instanceof CloseableHttpResponse) {
+					((CloseableHttpResponse) obj).close();
+				} else if (obj instanceof CloseableHttpClient) {
+					((CloseableHttpClient) obj).close();
+				}
+			}
+			
+		} catch (Exception e) {		
+			LOG.info("Error al cerrar recurso "+ recurso + " Error:" +e.getMessage());
+		}
+	}
+
+	 
+	
+	/**
+	 * INICIALIZAR TRUST MANAGER PARA SOLO PARA TRAZAR
+	 * 
+	 * @param sslContext
+	 */
+	private void inicializarTrusrManagerParaSoloTrazas(SSLContext sslContext)  {
+		
+		try {
+			//solo lo utilizamos  para trazas, en sslContext es donde se configura certificados,etc.
+			   TrustManager tm = new X509TrustManager() {
+			    	public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+			    		LOG.debug(" getAcceptedIssuers():OK");		
+						return null;
+					}
+					public void checkClientTrusted(java.security.cert.X509Certificate[] arg0, String arg1) throws java.security.cert.CertificateException {	
+						LOG.debug(" checkClientTrusted: " + arg0 + " X509Certificate[] encontrados: "+arg0.length + "  auth" +arg1);	
+					}
+					public void checkServerTrusted(java.security.cert.X509Certificate[] arg0, String arg1) throws java.security.cert.CertificateException {
+						LOG.debug("checkServerTrusted: " + arg0 + " X509Certificate[] encontrados: "+arg0.length);
+						for (java.security.cert.X509Certificate cert: arg0) { 
+							LOG.info(" Tipo:"+ cert.getType()+ " Version:" + cert.getVersion() + " "+cert.getSubjectDN());
+							break; //sacamos el primero encontrado
+						}	
+					}
+				}; 
+				//solo para trazas
+				sslContext.init(null, new TrustManager[]{tm}, null);
+				
+		} catch (Exception e) {
+			LOG.error(" Error al  inicializarTrusrManagerParaSoloTrazas: " + e.getMessage() );	
+			//no lanzar, solo es para trazear
+		}
+	}
+
+
+	//----------  CONFIGURACION HTTPCLIENT PARA TRABAJAR CON HTTPS, ETC  (YA CONFIGURADO NO TOCAR) ----------------
+	/**
+	 * 	CONFIGURAR CLOSEABLE HTTPCLIENT
+	 * 
+	 * @return
+	 * @throws NoSuchAlgorithmException
+	 * @throws KeyManagementException
+	 * @throws KeyStoreException
+	 */
+	private CloseableHttpClient configurarCloseableHttpClient() throws NoSuchAlgorithmException, KeyManagementException, KeyStoreException {
+		
+		//CONFIGURAR OBJETO  closeableHttpClient PARA HTTP Y HTTPS CON VERSION_TLS (Indicada, por defecto TLSv1.3)
+	
+	   //Aceptar todos los certificados (no los comprueba, no instados en cliente JVM,etc)
+	   TrustStrategy acceptingTrustStrategy = (cert, authType) -> true;
+	  
+	   //Crear SSL CONTEXT
+	   SSLContext sslContext = SSLContexts.custom().setProtocol(VERSION_TLS).loadTrustMaterial(null, acceptingTrustStrategy).build();
+	   SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE);	
+	
+	   //S�lo para mostrar  trazas. (NO UTILIZAR PARA CONFIGURAR CERTIFICADOS, ESO SE HACE EN loadTrustMaterial)
+	   this.inicializarTrusrManagerParaSoloTrazas(sslContext);
+	
+		//CREAR FACTORIA, HTTP  y HTTPS	 
+		Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory> create()
+																  .register("https", sslsf)
+																  .register("http", new PlainConnectionSocketFactory())
+																  .build();
+		
+		//Utilizado BasicHttpClientConnectionManager
+		BasicHttpClientConnectionManager connectionManager = new BasicHttpClientConnectionManager(socketFactoryRegistry);
+	
+		//Crear objeto HTTP CLIENT (Tipo CloseableHttpClient)  YA CONFIGURADO CON TODO LO ANTERIOR
+		CloseableHttpClient closeableHttpClient = HttpClients.custom()
+															  //_other_.setSSLSocketFactory(sslsf)
+															  .setConnectionManager(connectionManager)
+															  .setDefaultRequestConfig(
+																	  RequestConfig.custom().setConnectionRequestTimeout(CONNECTION_TIME_OUT,TimeUnit.MILLISECONDS) 
+												                							.setConnectTimeout(CONNECTION_TIME_OUT,TimeUnit.MILLISECONDS).build()
+												                							//_no_.setSocketTimeout(CONNECTION_TIME_OUT,TimeUnit.MILLISECONDS)						
+												                )
+															  .disableCookieManagement() //desactivar gestion cookies
+															  .build();
+	
+		LOG.info(" ---> CONFIGURADO HTTPCLIENT CON VERSION_TLS:  "+ VERSION_TLS);
+		System.out.println(" ---> CONFIGURADO HTTPCLIENT CON VERSION_TLS:  "+ VERSION_TLS);
+		return closeableHttpClient;
 	}
 	
 }
